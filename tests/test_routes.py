@@ -1,4 +1,3 @@
-import json
 
 
 def test_index_route(client):

@@ -13,20 +13,20 @@ Features:
   • Download processed outputs
 """
 
+import json
+import logging
 import os
 import re
-import uuid
-import json
-import time
 import shutil
-import threading
 import subprocess
-import logging
+import threading
+import time
+import uuid
 from pathlib import Path
-from typing import Union, List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlparse
-from flask import Flask, render_template, request, jsonify, send_file
-from werkzeug.utils import secure_filename
+
+from flask import Flask, jsonify, render_template, request, send_file
 
 # ── Product Identity ──────────────────────────────────────────────────────────
 APP_NAME = "Video Editor"
@@ -150,7 +150,8 @@ def safe_name(name: str) -> str:
     """Sanitize filename preserving Unicode while preventing traversal and reserved device names."""
     if not name:
         return f"file_{uid()}"
-    base = Path(name).name
+    # Normalize Windows-style separators so backslash paths are handled on any platform
+    base = Path(name.replace("\\", "/")).name
     # Replace illegal/control characters
     cleaned = re.sub(r'[\x00-\x1f\x7f<>:"/\\|?*]', "_", base).strip(". ")
     # Protect Windows reserved names

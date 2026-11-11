@@ -1,6 +1,6 @@
 import io
-from pathlib import Path
-from app import sanitize_settings, TRANSITIONS
+
+from app import sanitize_settings
 
 
 def test_path_traversal_download(client):
@@ -100,7 +100,7 @@ def test_sanitize_settings_clamping():
 
 def test_csrf_header_protection(client):
     # Same origin or empty origin is allowed
-    r1 = client.post("/probe", json={"path": "dummy"}, headers={"Origin": "http://localhost"})
+    client.post("/probe", json={"path": "dummy"}, headers={"Origin": "http://localhost"})
     # It might fail with 400 or 403 depending on host header, but let's test external origin
     r2 = client.post("/probe", json={"path": "dummy"}, headers={"Origin": "http://malicious-site.com"})
     assert r2.status_code == 403

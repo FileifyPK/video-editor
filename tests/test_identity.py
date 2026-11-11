@@ -1,4 +1,3 @@
-import os
 import subprocess
 from pathlib import Path
 
@@ -47,4 +46,4 @@ def test_no_forbidden_branding_in_repository():
         except Exception:
             pass
 
-    assert not violations, f"Branding violations found:\n" + "\n".join(violations)
+    assert not violations, "Branding violations found:\n" + "\n".join(violations)

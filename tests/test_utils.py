@@ -1,6 +1,6 @@
-from pathlib import Path
 import pytest
-from app import ts_to_secs, fmt_size, fmt_dur, safe_name, resolve_safe
+
+from app import fmt_dur, fmt_size, resolve_safe, safe_name, ts_to_secs
 
 
 def test_ts_to_secs():

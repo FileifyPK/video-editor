@@ -1,14 +1,16 @@
 import subprocess
 from pathlib import Path
+
 import pytest
-from app import ffmpeg_ok, probe, process_slideshow, process_job, jobs, _lock, uid
+
+from app import _lock, ffmpeg_ok, jobs, probe, process_job, process_slideshow, uid
 
 
 @pytest.mark.skipif(not ffmpeg_ok(), reason="FFmpeg executable is not available on PATH")
 def test_ffmpeg_slideshow_integration(test_env):
     """Test generating a short slideshow from synthetic images with FFmpeg."""
     images_dir = test_env["images"]
-    out_dir = test_env["output"]
+    test_env["output"]
 
     # Generate 2 test images using ffmpeg
     img1 = images_dir / "test1.png"
