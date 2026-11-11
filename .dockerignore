@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.ruff_cache
+docs/
+tests/
+*.mp4
+*.mov
+*.avi
+*.mkv

@@ -1,0 +1,16 @@
+services:
+  video-editor:
+    build: .
+    container_name: video-editor
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      - VIDEO_EDITOR_HOST=0.0.0.0
+      - VIDEO_EDITOR_PORT=5000
+      - VIDEO_EDITOR_MAX_UPLOAD_GB=5
+      - VIDEO_EDITOR_DEBUG=0
+    volumes:
+      - ./uploads:/app/uploads
+      - ./outputs:/app/outputs
+      - ./temp:/app/temp

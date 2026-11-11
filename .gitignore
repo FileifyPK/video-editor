@@ -1,0 +1,55 @@
+# Runtime user data — NEVER commit (private videos!)
+uploads/**
+!uploads/**/
+!uploads/**/.gitkeep
+outputs/**
+!outputs/.gitkeep
+temp/**
+!temp/.gitkeep
+
+# Media that might be dropped in by accident
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.m4v
+*.flv
+*.mp3
+*.wav
+*.aac
+*.m4a
+*.flac
+*.ogg
+!docs/**/*.png
+!docs/**/*.jpg
+!docs/**/*.gif
+!docs/**/*.webp
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Secrets / local config
+.env
+*.pem
+*.key
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp

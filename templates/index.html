@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ app_name }} — {{ app_tagline }}</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34' fill='none'%3E%3Crect x='2' y='3' width='30' height='28' rx='6' stroke='%23C9A84C' stroke-width='1.5' fill='%230a1628'/%3E%3Cpolygon points='14,13 23,17 14,21' fill='%23E8C97A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Josefin+Sans:wght@100;300;400;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   CSS VARIABLES & RESET
+═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:      #040a14;
+  --bg2:     #070f1e;
+  --bg3:     #0a1628;
+  --bg4:     #0e1e38;
+  --bg5:     #111f3a;
+  --border:  rgba(201,168,76,0.15);
+  --border2: rgba(201,168,76,0.30);
+  --gold:    #C9A84C;
+  --gold2:   #E8C97A;
+  --gold3:   #F5E4A8;
+  --goldDim: rgba(201,168,76,0.50);
+  --cyan:    #5CE8F0;
+  --cyan2:   #2ABFC8;
+  --white:   #EEF2FF;
+  --mute:    #4a6080;
+  --mute2:   #6a8aaa;
+  --red:     #e05555;
+  --green:   #4CAF82;
+  --warn:    #e0a040;
+  --r:       6px;
+  --r2:      10px;
+  --topbar-h: 60px;
+  --sidebar-l: 320px;
+  --sidebar-r: 300px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Josefin Sans', sans-serif;
+  font-weight: 300;
+  height: 100%;
+  overflow: hidden; /* body itself doesn't scroll — panels do */
+  font-size: 15px;
+}
+
+/* ─── SCROLLBAR ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.45); }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOPBAR — fixed, never hides
+═══════════════════════════════════════════════════════════════ */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+  height: var(--topbar-h);
+  background: rgba(4,10,20,0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  gap: 12px;
+}
+.topbar-title { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.app-icon { width: 34px; height: 34px; flex-shrink: 0; }
+.app-icon svg { width: 100%; height: 100%; }
+.app-name { font-family: 'Cinzel', serif; font-size: .85rem; letter-spacing: .32em; color: var(--gold2); line-height: 1.2; }
+.app-sub  { font-size: .5rem; letter-spacing: .28em; color: var(--mute); text-transform: uppercase; }
+.topbar-center { flex: 1; display: flex; justify-content: center; }
+.topbar-status { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.status-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: .6rem; letter-spacing: .18em; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 20px; border: 1px solid;
+  white-space: nowrap;
+}
+.status-badge.ok  { color: var(--green); border-color: rgba(76,175,130,.3); background: rgba(76,175,130,.06); }
+.status-badge.err { color: var(--red);   border-color: rgba(224,85,85,.3);  background: rgba(224,85,85,.06); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.dot.pulse { animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN 3-COLUMN LAYOUT
+   Height = viewport minus topbar. Each column scrolls independently.
+═══════════════════════════════════════════════════════════════ */
+.app-body {
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0; right: 0; bottom: 0;
+  display: grid;
+  grid-template-columns: var(--sidebar-l) 1fr var(--sidebar-r);
+}
+
+/* Each column: full height, independent scroll */
+.sidebar-left,
+.center-col,
+.sidebar-right {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-left  { border-right: 1px solid var(--border); padding: 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+.center-col    { padding: 0; display: flex; flex-direction: column; }
+.sidebar-right { border-left: 1px solid var(--border); padding: 16px 14px; display: flex; flex-direction: column; gap: 12px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   CENTER COLUMN — Settings panel (scrollable) + sticky bottom bar
+═══════════════════════════════════════════════════════════════ */
+.center-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+.center-bottom { flex-shrink: 0; padding: 14px 20px; background: rgba(4,10,20,0.95); border-top: 1px solid var(--border); }
+
+/* ═══════════════════════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════════════════════ */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  overflow: hidden;
+  flex-shrink: 0;
+  animation: fadeUp .3s ease both;
+}
+.card:nth-child(1){animation-delay:.04s} .card:nth-child(2){animation-delay:.08s}
+.card:nth-child(3){animation-delay:.12s} .card:nth-child(4){animation-delay:.16s}
+.card:nth-child(5){animation-delay:.20s} .card:nth-child(6){animation-delay:.24s}
+
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px;
+  border-bottom: 1px solid transparent;
+  background: rgba(201,168,76,.03);
+  cursor: pointer; user-select: none;
+  transition: background .15s;
+}
+.card-header:hover { background: rgba(201,168,76,.07); }
+.card-header.open  { border-bottom-color: var(--border); }
+.card-title { display: flex; align-items: center; gap: 8px; font-size: .68rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold2); }
+.card-title .icon { font-size: .9rem; }
+.card-chevron { color: var(--mute); font-size: .7rem; transition: transform .2s; flex-shrink: 0; }
+.card-chevron.open { transform: rotate(180deg); }
+.card-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.card-body.hidden { display: none; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION TITLES
+═══════════════════════════════════════════════════════════════ */
+.section-title {
+  font-family: 'Cinzel', serif;
+  font-size: .72rem; letter-spacing: .28em; text-transform: uppercase;
+  color: var(--gold); padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,var(--border2),transparent); }
+
+/* ═══════════════════════════════════════════════════════════════
+   DROPZONE
+═══════════════════════════════════════════════════════════════ */
+.dropzone {
+  border: 1.5px dashed var(--border2); border-radius: var(--r);
+  padding: 18px 10px; text-align: center; cursor: pointer;
+  transition: all .2s; position: relative; background: rgba(201,168,76,.02);
+}
+.dropzone:hover, .dropzone.drag-over { border-color: var(--gold); background: rgba(201,168,76,.06); }
+.dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.dropzone-icon { font-size: 1.5rem; margin-bottom: 5px; }
+.dropzone-label { font-size: .65rem; letter-spacing: .18em; color: var(--mute2); text-transform: uppercase; }
+.dropzone-hint  { font-size: .55rem; letter-spacing: .1em; color: var(--mute); margin-top: 3px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   FILE LISTS
+═══════════════════════════════════════════════════════════════ */
+.file-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; overflow-x: hidden; padding-right: 2px; }
+.file-item {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 8px 10px; font-size: .66rem; letter-spacing: .06em; transition: border-color .15s;
+  min-width: 0;
+}
+.file-item:hover { border-color: var(--border2); }
+.file-item.selected { border-color: var(--gold); background: rgba(201,168,76,.05); }
+.file-item input[type=checkbox] { accent-color: var(--gold); width: 14px; height: 14px; flex-shrink: 0; }
+.file-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--white); min-width: 0; }
+.file-meta { color: var(--mute); font-size: .58rem; white-space: nowrap; flex-shrink: 0; }
+.file-del  { color: var(--mute); cursor: pointer; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; transition: color .15s; }
+.file-del:hover { color: var(--red); }
+
+/* ═══════════════════════════════════════════════════════════════
+   FORM CONTROLS
+═══════════════════════════════════════════════════════════════ */
+.label { font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; color: var(--mute2); margin-bottom: 5px; display: block; }
+input[type=text], input[type=number], select, textarea {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  color: var(--white); font-family: 'Josefin Sans', sans-serif;
+  font-size: .75rem; padding: 9px 11px; border-radius: var(--r);
+  outline: none; transition: border-color .15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--gold); }
+select option { background: var(--bg3); }
+input[type=range] { width: 100%; accent-color: var(--gold); height: 4px; cursor: pointer; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOGGLE SWITCH
+═══════════════════════════════════════════════════════════════ */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.toggle-label { font-size: .7rem; letter-spacing: .12em; color: var(--mute2); }
+.toggle { position: relative; width: 40px; height: 22px; cursor: pointer; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; inset: 0; background: var(--bg4); border: 1px solid var(--border); border-radius: 22px; transition: .2s; }
+.slider::before { content:''; position:absolute; width:16px; height:16px; left:2px; top:2px; background:var(--mute); border-radius:50%; transition:.2s; }
+.toggle input:checked + .slider { background: rgba(201,168,76,.2); border-color: var(--gold); }
+.toggle input:checked + .slider::before { transform: translateX(18px); background: var(--gold); }
+
+/* ═══════════════════════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 10px 16px; border: none; border-radius: var(--r); cursor: pointer;
+  font-family: 'Josefin Sans', sans-serif; font-size: .65rem; letter-spacing: .2em;
+  text-transform: uppercase; transition: all .18s; white-space: nowrap;
+}
+.btn-primary { background: linear-gradient(135deg,#C9A84C,#8B6A1E); color: #030810; font-weight: 600; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(201,168,76,.35); }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-outline { background: transparent; border: 1px solid var(--border2); color: var(--gold2); }
+.btn-outline:hover { background: rgba(201,168,76,.08); }
+.btn-danger { background: rgba(224,85,85,.1); border: 1px solid rgba(224,85,85,.3); color: var(--red); }
+.btn-danger:hover { background: rgba(224,85,85,.2); }
+.btn-cyan { background: rgba(92,232,240,.1); border: 1px solid rgba(92,232,240,.3); color: var(--cyan); }
+.btn-cyan:hover { background: rgba(92,232,240,.2); }
+.btn-sm { padding: 7px 12px; font-size: .58rem; }
+.btn-full { width: 100%; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PROCESS / SLIDESHOW BIG BUTTONS (sticky bottom)
+═══════════════════════════════════════════════════════════════ */
+.action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.big-btn {
+  padding: 14px 10px;
+  background: linear-gradient(135deg,#C9A84C 0%,#8B6A1E 50%,#C9A84C 100%);
+  background-size: 200%; background-position: left;
+  color: #030810; border: none; border-radius: var(--r2);
+  font-family: 'Cinzel', serif; font-size: .72rem; letter-spacing: .28em;
+  cursor: pointer; transition: all .3s; position: relative; overflow: hidden;
+  white-space: nowrap;
+}
+.big-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255,255,255,.15), transparent);
+  transform: translateX(-100%); transition: transform .4s;
+}
+.big-btn:hover::before { transform: translateX(100%); }
+.big-btn:hover { background-position: right; box-shadow: 0 5px 24px rgba(201,168,76,.4); }
+.big-btn:disabled { opacity: .38; cursor: not-allowed; }
+.big-btn.btn-slide {
+  background: linear-gradient(135deg,#2ABFC8 0%,#0d6e76 50%,#2ABFC8 100%);
+  background-size: 200%; background-position: left;
+  color: #020d10;
+}
+.big-btn.btn-slide:hover { box-shadow: 0 5px 24px rgba(92,232,240,.4); }
+
+/* ═══════════════════════════════════════════════════════════════
+   TABS (center column)
+═══════════════════════════════════════════════════════════════ */
+.tabs { display: flex; border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; flex-shrink: 0; }
+.tab-btn {
+  flex: 1; padding: 9px 6px; background: transparent; border: none;
+  color: var(--mute); font-family: 'Josefin Sans', sans-serif;
+  font-size: .58rem; letter-spacing: .16em; text-transform: uppercase;
+  cursor: pointer; transition: all .15s; border-right: 1px solid var(--border);
+}
+.tab-btn:last-child { border-right: none; }
+.tab-btn:hover { color: var(--gold2); background: rgba(201,168,76,.05); }
+.tab-btn.active { background: rgba(201,168,76,.1); color: var(--gold2); }
+.tab-btn.tab-slide.active { background: rgba(92,232,240,.1); color: var(--cyan); }
+.tab-panel { display: none; flex-direction: column; gap: 12px; }
+.tab-panel.active { display: flex; }
+
+/* ═══════════════════════════════════════════════════════════════
+   POSITION PICKER
+═══════════════════════════════════════════════════════════════ */
+.pos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pos-btn {
+  padding: 8px 6px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r); color: var(--mute2); font-size: .6rem; letter-spacing: .14em;
+  text-transform: uppercase; cursor: pointer; text-align: center; transition: all .15s;
+}
+.pos-btn:hover { border-color: var(--gold); color: var(--gold); }
+.pos-btn.active { border-color: var(--gold); background: rgba(201,168,76,.1); color: var(--gold2); }
+
+/* ═══════════════════════════════════════════════════════════════
+   ORIENT PICKER
+═══════════════════════════════════════════════════════════════ */
+.orient-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.orient-btn {
+  padding: 12px 8px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r); color: var(--mute2); font-size: .65rem; letter-spacing: .12em;
+  text-transform: uppercase; cursor: pointer; text-align: center; transition: all .15s;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.orient-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.orient-btn.active { border-color: var(--cyan); background: rgba(92,232,240,.08); color: var(--cyan2); }
+.orient-icon { font-size: 1.6rem; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TRANSITION GRID
+═══════════════════════════════════════════════════════════════ */
+.trans-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 6px;
+  max-height: 260px; overflow-y: auto; padding-right: 4px;
+}
+.trans-btn {
+  padding: 7px 4px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r); color: var(--mute2); font-size: .55rem;
+  letter-spacing: .08em; text-transform: uppercase; cursor: pointer;
+  text-align: center; transition: all .15s;
+}
+.trans-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.trans-btn.active { border-color: var(--cyan); background: rgba(92,232,240,.1); color: var(--cyan2); }
+
+/* ═══════════════════════════════════════════════════════════════
+   RANGE ROW
+═══════════════════════════════════════════════════════════════ */
+.range-row { display: flex; align-items: center; gap: 10px; }
+.range-row input[type=range] { flex: 1; }
+.range-val {
+  width: 46px; text-align: center; font-size: .7rem;
+  color: var(--gold2); background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 4px; padding: 3px 5px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VIDEO QUEUE TABLE — with horizontal scroll
+═══════════════════════════════════════════════════════════════ */
+.queue-wrap {
+  width: 100%; overflow-x: auto; overflow-y: auto;
+  max-height: 260px; border: 1px solid var(--border); border-radius: var(--r2);
+  background: var(--bg2);
+}
+.queue-table { width: 100%; border-collapse: collapse; min-width: 480px; }
+.queue-table th {
+  font-size: .58rem; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--mute); padding: 8px 10px; text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3); position: sticky; top: 0; z-index: 1;
+  white-space: nowrap;
+}
+.queue-table td { padding: 8px 10px; font-size: .68rem; border-bottom: 1px solid rgba(201,168,76,.05); vertical-align: middle; }
+.queue-table tr:last-child td { border-bottom: none; }
+.queue-table tr:hover td { background: rgba(201,168,76,.03); }
+.queue-table .col-name { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--white); }
+.queue-table .col-meta { color: var(--mute2); font-size: .62rem; white-space: nowrap; }
+.queue-table .col-size { color: var(--mute); font-size: .58rem; white-space: nowrap; }
+
+/* ═══════════════════════════════════════════════════════════════
+   IMAGE QUEUE (slideshow)
+═══════════════════════════════════════════════════════════════ */
+.image-queue { display: flex; flex-direction: column; gap: 7px; max-height: 320px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
+.image-queue-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 10px;
+  cursor: grab; transition: border-color .15s; min-width: 0;
+}
+.image-queue-item:hover { border-color: var(--border2); }
+.image-queue-item.drag-item { opacity: .45; }
+.img-order { font-family:'Cinzel',serif; font-size:.75rem; color:var(--gold); min-width:22px; text-align:center; flex-shrink:0; }
+.img-thumb { width:44px; height:30px; object-fit:cover; border-radius:4px; border:1px solid var(--border); flex-shrink:0; }
+.img-name  { flex:1; font-size:.65rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.img-trans { width:100px; font-size:.6rem; padding:4px 6px; flex-shrink:0; }
+.img-move  { display:flex; flex-direction:column; gap:3px; flex-shrink:0; }
+.img-move button { background:none; border:none; color:var(--mute); cursor:pointer; font-size:.75rem; line-height:1; padding:2px 4px; }
+.img-move button:hover { color:var(--gold); }
+.img-del   { color:var(--mute); cursor:pointer; padding:2px 5px; border-radius:3px; flex-shrink:0; transition:color .15s; }
+.img-del:hover { color:var(--red); }
+
+/* ═══════════════════════════════════════════════════════════════
+   LOGO PREVIEW
+═══════════════════════════════════════════════════════════════ */
+.logo-preview-wrap { background:var(--bg3); border:1px solid var(--border); border-radius:var(--r); padding:10px; }
+.preview-screen {
+  position:relative; width:100%; aspect-ratio:16/9;
+  background:rgba(201,168,76,.03); border:1px dashed var(--border); border-radius:5px;
+  display:flex; align-items:center; justify-content:center;
+}
+.preview-screen-label { font-size:.56rem; color:var(--mute); letter-spacing:.16em; text-transform:uppercase; }
+.preview-logo-overlay { position:absolute; pointer-events:none; }
+.preview-logo-overlay img { max-width:70px; opacity:.8; border-radius:4px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   PROGRESS SECTION
+═══════════════════════════════════════════════════════════════ */
+.progress-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 16px; display: none;
+}
+.progress-card.active { display: block; }
+
+.progress-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; gap: 10px; }
+.progress-pct   { font-family:'Cinzel',serif; font-size:1.6rem; color:var(--gold2); line-height:1; }
+.progress-label { font-size:.62rem; letter-spacing:.2em; color:var(--mute2); text-transform:uppercase; margin-top:2px; }
+
+.bar-wrap { width:100%; height:7px; background:var(--bg4); border-radius:4px; overflow:hidden; margin:8px 0 4px; }
+.bar-fill { height:100%; border-radius:4px; transition:width .4s ease; width:0%; }
+.bar-main  { background:linear-gradient(90deg,var(--gold),var(--cyan)); }
+.bar-item  { background:var(--cyan); }
+
+.progress-meta { display:flex; justify-content:space-between; font-size:.6rem; color:var(--mute2); margin-top:4px; flex-wrap:wrap; gap:4px; }
+
+/* ETA highlighted */
+.eta-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(201,168,76,.12); border:1px solid rgba(201,168,76,.25);
+  border-radius:12px; padding:3px 10px; font-size:.6rem; color:var(--gold2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOG PANEL — right sidebar — fills available space
+═══════════════════════════════════════════════════════════════ */
+.log-panel-wrap { flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; }
+.log-panel {
+  flex:1; background:#020608;
+  border:1px solid rgba(92,232,240,.1); border-radius:var(--r);
+  padding:10px; font-family:'Courier New',monospace; font-size:.65rem;
+  line-height:1.7; overflow-y:auto; overflow-x:hidden;
+  color:var(--mute2); min-height:140px; max-height: 360px;
+}
+.log-info    { color:var(--mute2); word-break:break-all; }
+.log-success { color:var(--green); word-break:break-all; }
+.log-error   { color:var(--red);   word-break:break-all; }
+.log-warn    { color:var(--warn);  word-break:break-all; }
+.log-ts      { color:var(--mute); margin-right:8px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   JOB HISTORY
+═══════════════════════════════════════════════════════════════ */
+.job-history { display:flex; flex-direction:column; gap:5px; max-height:180px; overflow-y:auto; overflow-x:hidden; }
+.job-hist-item {
+  background:var(--bg3); border:1px solid var(--border); border-radius:var(--r);
+  padding:7px 10px; font-size:.58rem; display:flex; align-items:center; gap:8px; min-width:0;
+}
+.job-hist-id   { flex:1; color:var(--white); letter-spacing:.06em; overflow:hidden; text-overflow:ellipsis; }
+.job-hist-type { color:var(--mute); font-size:.52rem; white-space:nowrap; }
+.job-hist-stat { white-space:nowrap; font-size:.6rem; }
+
+/* ═══════════════════════════════════════════════════════════════
+   OUTPUTS
+═══════════════════════════════════════════════════════════════ */
+.output-list { display:flex; flex-direction:column; gap:8px; }
+.output-item {
+  background:rgba(76,175,130,.06); border:1px solid rgba(76,175,130,.2);
+  border-radius:var(--r); padding:10px 13px; display:flex; align-items:center; gap:10px; min-width:0;
+}
+.output-icon { font-size:1.1rem; flex-shrink:0; }
+.output-name { flex:1; font-size:.68rem; color:var(--green); overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.output-dl   { font-size:.65rem; color:var(--cyan); text-decoration:none; letter-spacing:.1em; font-weight:600; flex-shrink:0; white-space:nowrap; }
+.output-dl:hover { color:var(--gold); }
+
+/* ═══════════════════════════════════════════════════════════════
+   MISC
+═══════════════════════════════════════════════════════════════ */
+.select-bar { display:flex; align-items:center; gap:10px; }
+.select-bar label { font-size:.65rem; color:var(--mute2); letter-spacing:.1em; cursor:pointer; }
+.divider { height:1px; background:linear-gradient(90deg,transparent,var(--border2),transparent); opacity:.4; margin:4px 0; flex-shrink:0; }
+.badge-row { display:flex; gap:7px; flex-wrap:wrap; }
+.badge { padding:4px 10px; border-radius:20px; border:1px solid var(--border); font-size:.56rem; letter-spacing:.14em; text-transform:uppercase; color:var(--mute2); background:var(--bg3); }
+.ffmpeg-warn { background:rgba(224,85,85,.07); border:1px solid rgba(224,85,85,.3); border-radius:var(--r); padding:12px 14px; font-size:.68rem; color:var(--red); line-height:1.8; }
+.ffmpeg-warn a { color:var(--gold); }
+.info-box  { background:rgba(92,232,240,.04); border:1px solid rgba(92,232,240,.14); border-radius:var(--r); padding:10px 12px; font-size:.65rem; color:var(--mute2); line-height:1.8; }
+.info-box code { color:var(--cyan); }
+
+/* Select bar */
+.select-bar { flex-wrap:wrap; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE (narrower screens)
+═══════════════════════════════════════════════════════════════ */
+@media (max-width:1280px) {
+  :root { --sidebar-l:290px; --sidebar-r:270px; }
+}
+@media (max-width:1050px) {
+  :root { --sidebar-l:260px; --sidebar-r:250px; }
+  .action-btns { grid-template-columns:1fr; }
+}
+@media (max-width:820px) {
+  .app-body { grid-template-columns:1fr; grid-template-rows:auto 1fr auto; }
+  .sidebar-left, .sidebar-right { max-height:260px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR ═══════════════════════════════════════════════════════════ -->
+<header class="topbar">
+  <div class="topbar-title">
+    <div class="app-icon">
+      <svg viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="3" width="30" height="28" rx="6" stroke="#C9A84C" stroke-width="1.5" fill="rgba(10,22,40,0.85)"/>
+        <line x1="2" y1="10" x2="32" y2="10" stroke="#C9A84C" stroke-width="1" stroke-opacity="0.4"/>
+        <line x1="2" y1="24" x2="32" y2="24" stroke="#C9A84C" stroke-width="1" stroke-opacity="0.4"/>
+        <circle cx="6" cy="6.5" r="1.5" fill="#5CE8F0"/>
+        <circle cx="13" cy="6.5" r="1.5" fill="#5CE8F0" opacity="0.6"/>
+        <circle cx="20" cy="6.5" r="1.5" fill="#5CE8F0" opacity="0.6"/>
+        <circle cx="27" cy="6.5" r="1.5" fill="#5CE8F0"/>
+        <circle cx="6" cy="27.5" r="1.5" fill="#5CE8F0"/>
+        <circle cx="13" cy="27.5" r="1.5" fill="#5CE8F0" opacity="0.6"/>
+        <circle cx="20" cy="27.5" r="1.5" fill="#5CE8F0" opacity="0.6"/>
+        <circle cx="27" cy="27.5" r="1.5" fill="#5CE8F0"/>
+        <polygon points="14,13 23,17 14,21" fill="#E8C97A"/>
+      </svg>
+    </div>
+    <div>
+      <div class="app-name">{{ app_name }}</div>
+      <div class="app-sub">Batch Processor &amp; Slideshow</div>
+    </div>
+  </div>
+
+  <div class="topbar-status">
+    {% if ffmpeg_ok %}
+    <div class="status-badge ok"><div class="dot pulse"></div> FFmpeg Ready</div>
+    {% else %}
+    <div class="status-badge err"><div class="dot"></div> FFmpeg Missing</div>
+    {% endif %}
+    <div class="status-badge ok" id="app-status"><div class="dot"></div> Running</div>
+  </div>
+</header>
+
+<!-- ═══ MAIN 3-COLUMN BODY ══════════════════════════════════════════════ -->
+<div class="app-body">
+
+<!-- ════════════════ LEFT SIDEBAR ════════════════ -->
+<aside class="sidebar-left">
+
+  {% if not ffmpeg_ok %}
+  <div class="ffmpeg-warn">
+    ⚠ FFmpeg not found.<br>
+    Download: <a href="https://ffmpeg.org/download.html" target="_blank">ffmpeg.org</a><br>
+    Add <code>ffmpeg.exe</code> to Windows PATH, then restart.
+  </div>
+  {% endif %}
+
+  <!-- Videos -->
+  <div class="card">
+    <div class="card-header open" onclick="toggleCard(this)">
+      <div class="card-title"><span class="icon">🎬</span> Videos</div>
+      <div class="card-chevron open">▼</div>
+    </div>
+    <div class="card-body">
+      <div class="dropzone" id="dz-videos">
+        <input type="file" accept="video/*" multiple onchange="uploadFiles('videos',this.files)">
+        <div class="dropzone-icon">📁</div>
+        <div class="dropzone-label">Drop videos here</div>
+        <div class="dropzone-hint">MP4 · MOV · AVI · MKV — Multiple OK</div>
+      </div>
+      <div id="video-list" class="file-list"></div>
+      <div class="select-bar">
+        <input type="checkbox" id="select-all" onchange="selectAllVideos(this.checked)" style="accent-color:var(--gold)">
+        <label for="select-all">Select All</label>
+        <button class="btn btn-outline btn-sm" onclick="clearFolder('videos')" style="margin-left:auto">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Images (Slideshow) -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <div class="card-title">
+        <span class="icon">🖼</span> Images
+        <span style="font-size:.42rem;color:var(--cyan);border:1px solid var(--cyan);padding:2px 5px;border-radius:3px;margin-left:4px">SLIDESHOW</span>
+      </div>
+      <div class="card-chevron">▼</div>
+    </div>
+    <div class="card-body hidden">
+      <div class="dropzone">
+        <input type="file" accept="image/*" multiple onchange="uploadImages(this.files)">
+        <div class="dropzone-icon">🖼</div>
+        <div class="dropzone-label">Drop images here</div>
+        <div class="dropzone-hint">PNG · JPG · WEBP — Drag to reorder</div>
+      </div>
+      <div id="image-queue" class="image-queue"></div>
+      <button class="btn btn-outline btn-sm btn-full" onclick="clearImages()">Clear All Images</button>
+    </div>
+  </div>
+
+  <!-- Logo -->
+  <div class="card">
+    <div class="card-header open" onclick="toggleCard(this)">
+      <div class="card-title"><span class="icon">🔖</span> Logo</div>
+      <div class="card-chevron open">▼</div>
+    </div>
+    <div class="card-body">
+      <div class="dropzone">
+        <input type="file" accept="image/png,image/webp" onchange="uploadFiles('logo',this.files)">
+        <div class="dropzone-icon">🖼</div>
+        <div class="dropzone-label">Transparent PNG</div>
+        <div class="dropzone-hint">Alpha channel recommended</div>
+      </div>
+      <div id="logo-list" class="file-list"></div>
+    </div>
+  </div>
+
+  <!-- Intro / Outro / Mid-roll -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <div class="card-title"><span class="icon">🎞</span> Intro / Outro / Mid</div>
+      <div class="card-chevron">▼</div>
+    </div>
+    <div class="card-body hidden">
+      <span class="label">Intro Clip</span>
+      <div class="dropzone">
+        <input type="file" accept="video/*" onchange="uploadFiles('intro',this.files)">
+        <div class="dropzone-label">Drop Intro</div>
+      </div>
+      <div id="intro-list" class="file-list"></div>
+      <div class="divider"></div>
+      <span class="label">Outro Clip</span>
+      <div class="dropzone">
+        <input type="file" accept="video/*" onchange="uploadFiles('outro',this.files)">
+        <div class="dropzone-label">Drop Outro</div>
+      </div>
+      <div id="outro-list" class="file-list"></div>
+      <div class="divider"></div>
+      <span class="label">Mid-roll Clip</span>
+      <div class="dropzone">
+        <input type="file" accept="video/*" onchange="uploadFiles('mid',this.files)">
+        <div class="dropzone-label">Drop Mid-roll</div>
+      </div>
+      <div id="mid-list" class="file-list"></div>
+      <span class="label" style="margin-top:4px">Insert at Timestamp</span>
+      <input type="text" id="mid-timestamp" placeholder="e.g. 00:05:30">
+    </div>
+  </div>
+
+  <!-- Audio -->
+  <div class="card">
+    <div class="card-header" onclick="toggleCard(this)">
+      <div class="card-title"><span class="icon">🎙</span> Audio Files</div>
+      <div class="card-chevron">▼</div>
+    </div>
+    <div class="card-body hidden">
+      <div class="dropzone">
+        <input type="file" accept="audio/*" onchange="uploadFiles('audio',this.files)">
+        <div class="dropzone-label">Replacement / BG Audio</div>
+        <div class="dropzone-hint">MP3 · WAV · AAC · M4A</div>
+      </div>
+      <div id="audio-list" class="file-list"></div>
+    </div>
+  </div>
+
+</aside>
+<!-- end LEFT SIDEBAR -->
+
+<!-- ════════════════ CENTER COLUMN ════════════════ -->
+<main class="center-col">
+  <div class="center-scroll">
+
+    <div class="section-title">⚙ Settings</div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active"     onclick="switchTab(this,'tab-logo')">🔖 Logo</button>
+      <button class="tab-btn"            onclick="switchTab(this,'tab-trim')">✂ Trim</button>
+      <button class="tab-btn"            onclick="switchTab(this,'tab-audio')">🎵 Audio</button>
+      <button class="tab-btn"            onclick="switchTab(this,'tab-output')">📦 Output</button>
+      <button class="tab-btn tab-slide"  onclick="switchTab(this,'tab-slideshow')">🎞 Slideshow</button>
+    </div>
+
+    <!-- TAB: Logo ───────────────────────────── -->
+    <div class="tab-panel active" id="tab-logo">
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">🔖</span> Logo Watermark</div>
+          <div class="card-chevron open">▼</div>
+        </div>
+        <div class="card-body">
+          <div class="toggle-row">
+            <span class="toggle-label">Enable Logo Overlay</span>
+            <label class="toggle"><input type="checkbox" id="logo-enabled" onchange="updateLogoPreview()"><span class="slider"></span></label>
+          </div>
+          <span class="label">Position</span>
+          <div class="pos-grid">
+            <button class="pos-btn" data-pos="top_left"    onclick="setPos(this)">↖ Top Left</button>
+            <button class="pos-btn active" data-pos="top_right" onclick="setPos(this)">↗ Top Right</button>
+            <button class="pos-btn" data-pos="bottom_left" onclick="setPos(this)">↙ Bot Left</button>
+            <button class="pos-btn" data-pos="bottom_right" onclick="setPos(this)">↘ Bot Right</button>
+          </div>
+          <div class="row2">
+            <div>
+              <span class="label">Size (px)</span>
+              <div class="range-row">
+                <input type="range" id="logo-size" min="60" max="400" value="150" oninput="this.nextElementSibling.textContent=this.value+'px';updateLogoPreview()">
+                <span class="range-val">150px</span>
+              </div>
+            </div>
+            <div>
+              <span class="label">Opacity</span>
+              <div class="range-row">
+                <input type="range" id="logo-opacity" min="10" max="100" value="80" oninput="this.nextElementSibling.textContent=this.value+'%';updateLogoPreview()">
+                <span class="range-val">80%</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <span class="label">Margin from Edge (px)</span>
+            <div class="range-row">
+              <input type="range" id="logo-margin" min="0" max="120" value="40" oninput="this.nextElementSibling.textContent=this.value+'px'">
+              <span class="range-val">40px</span>
+            </div>
+          </div>
+          <span class="label">Preview</span>
+          <div class="logo-preview-wrap">
+            <div class="preview-screen" id="preview-screen">
+              <div class="preview-screen-label">Video Preview Area</div>
+              <div class="preview-logo-overlay" id="preview-logo" style="display:none">
+                <img id="preview-logo-img" src="" alt="logo">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Trim ───────────────────────────── -->
+    <div class="tab-panel" id="tab-trim">
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">✂</span> Trim / Cut (Multiple Sections)</div>
+          <div class="card-chevron open">▼</div>
+        </div>
+        <div class="card-body">
+          <div id="trim-segments-container" style="display:flex; flex-direction:column; gap:10px;">
+            <div class="trim-segment row2" data-segment-id="0">
+              <div>
+                <span class="label">Section 1: Start</span>
+                <input type="text" class="trim-start" placeholder="00:00:00">
+              </div>
+              <div>
+                <span class="label">Section 1: End</span>
+                <input type="text" class="trim-end" placeholder="End">
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="addTrimSegment()" style="margin-top:10px">+ Add Another Section</button>
+          
+          <div class="info-box" style="margin-top:10px">
+            ✂ <strong style="color:var(--gold)">Multiple Sections</strong> — Extract multiple parts and join them automatically.<br>
+            Format: <code>HH:MM:SS</code> or plain seconds.<br>
+            <em>Example: 00:01:00 to 00:01:30 and 00:04:00 to 00:05:00</em>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">🔗</span> Intro / Outro / Mid-roll</div>
+          <div class="card-chevron open">▼</div>
+        </div>
+        <div class="card-body">
+          <div class="toggle-row">
+            <span class="toggle-label">Add Intro Clip at Start</span>
+            <label class="toggle"><input type="checkbox" id="add-intro" checked><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Add Outro Clip at End</span>
+            <label class="toggle"><input type="checkbox" id="add-outro" checked><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Add Mid-roll Clip</span>
+            <label class="toggle"><input type="checkbox" id="add-mid"><span class="slider"></span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Audio ───────────────────────────── -->
+    <div class="tab-panel" id="tab-audio">
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">🎵</span> Audio Mode</div>
+          <div class="card-chevron open">▼</div>
+        </div>
+        <div class="card-body">
+          <span class="label">Audio Treatment</span>
+          <select id="audio-mode" onchange="updateAudioUI()">
+            <option value="keep">Keep Original Audio</option>
+            <option value="mute">Mute (Remove Audio)</option>
+            <option value="replace">Replace with New Audio</option>
+            <option value="add">Add Background Track (Mix)</option>
+          </select>
+          <div id="audio-replace-section" style="display:none">
+            <span class="label">Replacement Audio File</span>
+            <select id="replace-audio-select"><option value="">— Upload audio in sidebar —</option></select>
+          </div>
+          <div id="audio-add-section" style="display:none">
+            <span class="label">Background Audio File</span>
+            <select id="add-audio-select"><option value="">— Upload audio in sidebar —</option></select>
+            <span class="label" style="margin-top:6px">Background Volume</span>
+            <div class="range-row">
+              <input type="range" id="bg-volume" min="0" max="100" value="30" oninput="this.nextElementSibling.textContent=this.value+'%'">
+              <span class="range-val">30%</span>
+            </div>
+          </div>
+          <div>
+            <span class="label">Main Audio Volume</span>
+            <div class="range-row">
+              <input type="range" id="audio-volume" min="0" max="200" value="100" oninput="this.nextElementSibling.textContent=this.value+'%'">
+              <span class="range-val">100%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Output ───────────────────────────── -->
+    <div class="tab-panel" id="tab-output">
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">📦</span> Export Settings</div>
+          <div class="card-chevron open">▼</div>
+        </div>
+        <div class="card-body">
+          <div class="row2">
+            <div>
+              <span class="label">Quality Preset</span>
+              <select id="quality">
+                <option value="high">High Quality (CRF 18)</option>
+                <option value="medium" selected>Balanced (CRF 23)</option>
+                <option value="fast">Fast / Smaller (CRF 28)</option>
+              </select>
+            </div>
+            <div>
+              <span class="label">GPU Acceleration</span>
+              <select id="use-gpu">
+                <option value="false">CPU (libx264) — Safe</option>
+                <option value="true">NVIDIA GPU (h264_nvenc)</option>
+              </select>
+            </div>
+          </div>
+          <div class="info-box">
+            ℹ GPU requires NVIDIA with NVENC support.<br>
+            CPU is universally compatible.<br>
+            Outputs saved to: <code>outputs/[job_id]/</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Slideshow ───────────────────────── -->
+    <div class="tab-panel" id="tab-slideshow">
+
+      <div class="info-box" style="border-color:rgba(92,232,240,.25)">
+        🎞 <strong style="color:var(--cyan)">Image Slideshow</strong> — Turn images into an MP4 with transition effects.<br>
+        Upload images in left sidebar → reorder → configure below → Generate.
+      </div>
+
+      <!-- Orientation -->
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">📐</span> Output Orientation</div>
+          <div class="card-chevron open">▼</div>
+        </div>
+        <div class="card-body">
+          <div class="orient-row">
+            <button class="orient-btn active" data-orient="landscape" onclick="setOrientation(this)">
+              <span class="orient-icon">🖥</span>
+              <strong>Landscape</strong>
+              <span style="font-size:.44rem;color:var(--mute)">1920×1080 · YouTube</span>
+            </button>
+            <button class="orient-btn" data-orient="portrait" onclick="setOrientation(this)">
+              <span class="orient-icon">📱</span>
+              <strong>Portrait</strong>
+              <span style="font-size:.44rem;color:var(--mute)">1080×1920 · Reels/TikTok</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timing -->
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">⏱</span> Timing &amp; Format</div>
+          <div class="card-chevron open">▼</div>
+        </div>
+        <div class="card-body">
+          <div class="row2">
+            <div>
+              <span class="label">Seconds per Image</span>
+              <div class="range-row">
+                <input type="range" id="img-duration" min="1" max="30" value="4" step="0.5"
+                       oninput="this.nextElementSibling.textContent=this.value+'s';updateSlideshowEstimate()">
+                <span class="range-val">4s</span>
+              </div>
+            </div>
+            <div>
+              <span class="label">Transition Duration</span>
+              <div class="range-row">
+                <input type="range" id="trans-duration" min="0.2" max="3" value="0.8" step="0.1"
+                       oninput="this.nextElementSibling.textContent=this.value+'s';updateSlideshowEstimate()">
+                <span class="range-val">0.8s</span>
+              </div>
+            </div>
+          </div>
+          <div class="row2">
+            <div>
+              <span class="label">Frame Rate</span>
+              <select id="ss-fps">
+                <option value="24">24 fps — Cinematic</option>
+                <option value="30" selected>30 fps — Standard</option>
+                <option value="60">60 fps — Smooth</option>
+              </select>
+            </div>
+            <div>
+              <span class="label">Output Filename</span>
+              <input type="text" id="ss-output-name" value="slideshow" placeholder="slideshow">
+            </div>
+          </div>
+          <div id="slideshow-estimate" class="info-box">
+            Upload images to see estimated video duration.
+          </div>
+        </div>
+      </div>
+
+      <!-- Transitions -->
+      <div class="card">
+        <div class="card-header open" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">✨</span> Transition Effect</div>
+          <div class="card-chevron open">▼</div>
+        </div>
+        <div class="card-body">
+          <div class="trans-grid" id="trans-grid">
+            {% for key, label in transitions.items() %}
+            <button class="trans-btn {% if key == 'fade' %}active{% endif %}"
+                    data-trans="{{ key }}" onclick="setTransition(this)">{{ label }}</button>
+            {% endfor %}
+          </div>
+          <div style="font-size:.56rem;color:var(--mute);margin-top:4px">
+            Selected: <span id="trans-selected-label" style="color:var(--cyan)">Fade</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Background Audio for Slideshow -->
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">🎵</span> Background Audio</div>
+          <div class="card-chevron">▼</div>
+        </div>
+        <div class="card-body hidden">
+          <div class="toggle-row">
+            <span class="toggle-label">Add Background Audio</span>
+            <label class="toggle"><input type="checkbox" id="ss-audio-enabled" onchange="updateSSAudioUI()"><span class="slider"></span></label>
+          </div>
+          <div id="ss-audio-section" style="display:none">
+            <span class="label">Audio File</span>
+            <select id="ss-audio-select"><option value="">— Upload audio in sidebar —</option></select>
+            <div class="info-box" style="margin-top:6px;font-size:.56rem">
+              Audio will be looped and trimmed to match video length.<br>
+              2-second fade-out applied automatically.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logo Overlay for Slideshow -->
+      <div class="card">
+        <div class="card-header" onclick="toggleCard(this)">
+          <div class="card-title"><span class="icon">🔖</span> Logo Overlay</div>
+          <div class="card-chevron">▼</div>
+        </div>
+        <div class="card-body hidden">
+          <div class="toggle-row">
+            <span class="toggle-label">Add Logo to Slideshow</span>
+            <label class="toggle"><input type="checkbox" id="ss-logo-enabled"><span class="slider"></span></label>
+          </div>
+          <div class="info-box" style="margin-top:6px;font-size:.56rem">
+            Uses logo from the Logo section (left sidebar).<br>
+            Position/size/opacity from the Logo tab apply.
+          </div>
+        </div>
+      </div>
+
+      <!-- Slideshow Generate Button (inside tab) -->
+      <button class="big-btn btn-slide" id="slideshow-btn"
+              onclick="startSlideshow()" {% if not ffmpeg_ok %}disabled{% endif %}>
+        🎞 Generate Slideshow Video
+      </button>
+
+    </div>
+    <!-- end TAB Slideshow -->
+
+    <!-- VIDEO QUEUE TABLE -->
+    <div class="section-title" style="margin-top:8px">📋 Video Queue</div>
+    <div class="queue-wrap">
+      <table class="queue-table">
+        <thead><tr>
+          <th style="width:32px">✓</th>
+          <th>Filename</th>
+          <th>Duration</th>
+          <th>Resolution</th>
+          <th>Codec</th>
+          <th>Size</th>
+        </tr></thead>
+        <tbody id="queue-body">
+          <tr><td colspan="6" style="text-align:center;color:var(--mute);padding:20px;font-size:.62rem">
+            No videos uploaded yet
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- PROGRESS SECTION -->
+    <div class="progress-card" id="progress-section">
+      <div class="progress-header">
+        <div>
+          <div class="progress-pct" id="progress-pct">0%</div>
+          <div class="progress-label" id="progress-label">Initializing…</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <div class="eta-badge" id="eta-badge">⏱ ETA: --:--</div>
+          <button class="btn btn-danger btn-sm" onclick="cancelJob()">✕ Cancel</button>
+        </div>
+      </div>
+
+      <!-- Overall progress -->
+      <div style="font-size:.58rem;color:var(--mute2);margin-bottom:3px">Overall Progress</div>
+      <div class="bar-wrap"><div class="bar-fill bar-main" id="progress-fill"></div></div>
+
+      <!-- Per-item progress -->
+      <div style="font-size:.58rem;color:var(--mute2);margin-bottom:3px;margin-top:8px">Current File</div>
+      <div class="bar-wrap" style="height:5px"><div class="bar-fill bar-item" id="item-progress-fill"></div></div>
+
+      <div class="progress-meta">
+        <span id="progress-count">Files: 0 / 0</span>
+        <span id="progress-elapsed">Elapsed: 0s</span>
+        <span id="progress-speed" style="color:var(--cyan)"></span>
+      </div>
+    </div>
+
+    <!-- OUTPUTS -->
+    <div id="outputs-section" style="display:none">
+      <div class="section-title" style="margin-top:8px">✅ Completed Files</div>
+      <div class="output-list" id="output-list"></div>
+    </div>
+
+  </div><!-- end center-scroll -->
+
+  <!-- STICKY BOTTOM ACTION BUTTONS -->
+  <div class="center-bottom">
+    <div class="action-btns">
+      <button class="big-btn" id="process-btn" onclick="startProcess()"
+              {% if not ffmpeg_ok %}disabled{% endif %}>
+        ▶ Process Videos
+      </button>
+      <button class="big-btn btn-slide" id="process-slideshow-btn" onclick="startSlideshow()"
+              {% if not ffmpeg_ok %}disabled{% endif %}>
+        🎞 Slideshow
+      </button>
+    </div>
+  </div>
+
+</main>
+<!-- end CENTER -->
+
+<!-- ════════════════ RIGHT SIDEBAR ════════════════ -->
+<aside class="sidebar-right">
+
+  <!-- Live Log (flex-grows to fill space) -->
+  <div class="section-title" style="font-size:.62rem;flex-shrink:0">📡 Live Log</div>
+  <div class="log-panel-wrap">
+    <div class="log-panel" id="log-panel">
+      <span class="log-info"><span class="log-ts">--:--:--</span>{{ app_name }} ready.</span>
+    </div>
+  </div>
+  <button class="btn btn-outline btn-sm btn-full" onclick="clearLog()" style="flex-shrink:0">Clear Log</button>
+
+  <div class="divider"></div>
+
+  <!-- Job History -->
+  <div class="section-title" style="font-size:.62rem;flex-shrink:0">🗂 Job History</div>
+  <div class="job-history" id="job-history">
+    <div style="font-size:.56rem;color:var(--mute);letter-spacing:.1em">No jobs yet.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Tips Card -->
+  <div class="card" style="flex-shrink:0">
+    <div class="card-header" onclick="toggleCard(this)">
+      <div class="card-title"><span class="icon">💡</span> Quick Tips</div>
+      <div class="card-chevron">▼</div>
+    </div>
+    <div class="card-body hidden" style="font-size:.6rem;line-height:2;color:var(--mute2)">
+      <div>🔖 <strong style="color:var(--gold)">Top Right</strong> logo — subtitle-safe zone</div>
+      <div>📐 Keep logo <strong style="color:var(--gold)">7–10%</strong> of video width</div>
+      <div>🌓 Use <strong style="color:var(--gold)">80% opacity</strong> for watermark</div>
+      <div>🎞 Drag images to reorder slideshow</div>
+      <div>⏱ 3–5s per image works best</div>
+      <div>📱 Portrait → Reels / Shorts / TikTok</div>
+      <div>🖥 Landscape → YouTube / Facebook</div>
+    </div>
+  </div>
+
+  <!-- FFmpeg Command Preview -->
+  <div class="card" style="flex-shrink:0">
+    <div class="card-header" onclick="toggleCard(this)">
+      <div class="card-title"><span class="icon">⌨</span> FFmpeg Preview</div>
+      <div class="card-chevron">▼</div>
+    </div>
+    <div class="card-body hidden">
+      <div id="ffmpeg-preview" class="log-panel" style="font-size:.5rem;max-height:140px">
+        Configure settings — command will appear here.
+      </div>
+    </div>
+  </div>
+
+</aside>
+<!-- end RIGHT SIDEBAR -->
+
+</div><!-- end app-body -->
+
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let uploadedFiles  = {videos:[],logo:[],intro:[],outro:[],mid:[],audio:[],images:[]};
+let selectedVideos = new Set();
+let imageOrder     = [];
+let currentJobId   = null;
+let pollInterval   = null;
+let elapsedInterval= null;
+let jobStartTime   = null;
+let logoPosition   = 'top_right';
+let selectedTrans  = 'fade';
+let selectedOrient = 'landscape';
+let lastLogCount   = 0;
+const TRANS_LIST   = {{ transitions | tojson }};
+
+// ═══════════════════════════════════════════════════════════
+//  CARD / TAB HELPERS
+// ═══════════════════════════════════════════════════════════
+function toggleCard(header){
+  const body    = header.nextElementSibling;
+  const chevron = header.querySelector('.card-chevron');
+  const isOpen  = !body.classList.contains('hidden');
+  body.classList.toggle('hidden');
+  chevron.classList.toggle('open', isOpen);  // remove open when closing
+  header.classList.toggle('open', !isOpen);
+  // rebuild: chevron open = showing (not hidden)
+  if(body.classList.contains('hidden')){
+    chevron.classList.remove('open');
+    header.classList.remove('open');
+  } else {
+    chevron.classList.add('open');
+    header.classList.add('open');
+  }
+}
+
+function switchTab(btn, panelId){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FILE UPLOAD
+// ═══════════════════════════════════════════════════════════
+async function uploadFiles(folder, files){
+  if(!files || files.length === 0) return;
+  const fd = new FormData();
+  for(const f of files) fd.append('files', f);
+  logMsg(`Uploading ${files.length} file(s) to "${folder}"…`);
+  try {
+    const resp = await fetch(`/upload/${folder}`, {method:'POST', body:fd});
+    const data = await resp.json();
+    if(data.uploaded){
+      uploadedFiles[folder] = [...uploadedFiles[folder], ...data.uploaded];
+      if(folder === 'videos'){
+        // Auto-select all newly uploaded videos
+        data.uploaded.forEach(f => selectedVideos.add(f.path));
+      }
+      renderFileList(folder);
+      if(folder === 'videos') renderQueue();
+      if(folder === 'audio'){ renderAudioSelects(); renderSSAudioSelect(); }
+      if(folder === 'logo') updateLogoPreview();
+      logMsg(`✓ ${data.uploaded.length} file(s) uploaded to "${folder}"`, 'success');
+    }
+  } catch(e){ logMsg(`✗ Upload failed: ${e}`, 'error'); }
+}
+
+function renderFileList(folder){
+  const container = document.getElementById(`${folder}-list`);
+  if(!container) return;
+  container.innerHTML = '';
+  uploadedFiles[folder].forEach((f, idx) => {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    const size = f.size_fmt || '';
+    const dur  = f.duration_fmt ? ` · ${f.duration_fmt}` : '';
+    if(folder === 'videos'){
+      item.innerHTML = `
+        <input type="checkbox" onchange="toggleVideoSelect('${escAttr(f.path)}',this.checked)" id="vf-${idx}" style="accent-color:var(--gold)">
+        <label class="file-name" for="vf-${idx}" title="${escAttr(f.name)}">${escHtml(f.name)}</label>
+        <span class="file-meta">${escHtml(size)}${escHtml(dur)}</span>
+        <span class="file-del" onclick="removeFile('${folder}',${idx})" title="Remove">✕</span>`;
+    } else {
+      item.innerHTML = `
+        <span class="file-name" title="${escAttr(f.name)}">${escHtml(f.name)}</span>
+        <span class="file-meta">${escHtml(size)}</span>
+        <span class="file-del" onclick="removeFile('${folder}',${idx})" title="Remove">✕</span>`;
+    }
+    container.appendChild(item);
+  });
+}
+
+function removeFile(folder, idx){
+  const removed = uploadedFiles[folder].splice(idx,1)[0];
+  if(removed && folder === 'videos') selectedVideos.delete(removed.path);
+  renderFileList(folder);
+  if(folder === 'videos') renderQueue();
+  if(folder === 'audio'){ renderAudioSelects(); renderSSAudioSelect(); }
+  if(folder === 'logo') updateLogoPreview();
+}
+
+async function clearFolder(folder){
+  try {
+    await fetch(`/clear/${folder}`, {method:'POST'});
+    uploadedFiles[folder] = [];
+    renderFileList(folder);
+    if(folder === 'videos'){ selectedVideos.clear(); renderQueue(); updateProcessBtn(); }
+  } catch(e){ logMsg(`✗ Clear failed: ${e}`, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  IMAGE UPLOAD + SLIDESHOW QUEUE
+// ═══════════════════════════════════════════════════════════
+async function uploadImages(files){
+  if(!files || files.length === 0) return;
+  const fd = new FormData();
+  for(const f of files) fd.append('files', f);
+  logMsg(`Uploading ${files.length} image(s)…`);
+  try {
+    const resp = await fetch('/upload/images', {method:'POST', body:fd});
+    const data = await resp.json();
+    if(data.uploaded){
+      const startIdx = imageOrder.length;
+      for(const f of data.uploaded){
+        imageOrder.push({name: f.name, path: f.path, url: null});
+      }
+      const fileArr = Array.from(files);
+      for(let i = 0; i < fileArr.length && i < data.uploaded.length; i++){
+        imageOrder[startIdx + i].url = URL.createObjectURL(fileArr[i]);
+      }
+      renderImageQueue();
+      updateSlideshowEstimate();
+      logMsg(`✓ ${data.uploaded.length} image(s) uploaded`, 'success');
+    }
+  } catch(e){ logMsg(`✗ Image upload failed: ${e}`, 'error'); }
+}
+
+function renderImageQueue(){
+  const container = document.getElementById('image-queue');
+  if(imageOrder.length === 0){
+    container.innerHTML = '<div style="font-size:.68rem;color:var(--mute);text-align:center;padding:14px">No images yet.</div>';
+    return;
+  }
+  const transOptions = Object.entries(TRANS_LIST).map(([k,v]) =>
+    `<option value="${escAttr(k)}">${escHtml(v)}</option>`).join('');
+
+  container.innerHTML = '';
+  imageOrder.forEach((img, idx) => {
+    const item = document.createElement('div');
+    item.className = 'image-queue-item';
+    item.draggable  = true;
+    item.dataset.idx = idx;
+    const isLast = idx === imageOrder.length - 1;
+    const transHtml = isLast
+      ? '<div style="width:100px;flex-shrink:0"></div>'
+      : `<select class="img-trans" onchange="imageOrder[${idx}].transition=this.value" title="Transition after this image">
+           <option value="">Default</option>${transOptions}
+         </select>`;
+
+    item.innerHTML = `
+      <span class="img-order">${idx+1}</span>
+      ${img.url
+        ? `<img class="img-thumb" src="${escAttr(img.url)}" alt="">`
+        : '<div style="width:44px;height:30px;background:var(--bg4);border-radius:4px;border:1px solid var(--border);flex-shrink:0"></div>'}
+      <span class="img-name" title="${escAttr(img.name)}">${escHtml(img.name)}</span>
+      ${transHtml}
+      <div class="img-move">
+        <button onclick="moveImage(${idx},-1)" title="Move up">▲</button>
+        <button onclick="moveImage(${idx},+1)" title="Move down">▼</button>
+      </div>
+      <span class="img-del" onclick="removeImage(${idx})" title="Remove">✕</span>`;
+
+    if(!isLast && img.transition){
+      const sel = item.querySelector('.img-trans');
+      if(sel) sel.value = img.transition;
+    }
+    item.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', idx); item.classList.add('drag-item'); });
+    item.addEventListener('dragend',   () => item.classList.remove('drag-item'));
+    item.addEventListener('dragover',  e => e.preventDefault());
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx   = parseInt(item.dataset.idx);
+      if(fromIdx !== toIdx){
+        const moved = imageOrder.splice(fromIdx,1)[0];
+        imageOrder.splice(toIdx,0,moved);
+        renderImageQueue();
+        updateSlideshowEstimate();
+      }
+    });
+    container.appendChild(item);
+  });
+}
+
+function moveImage(idx, dir){
+  const newIdx = idx + dir;
+  if(newIdx < 0 || newIdx >= imageOrder.length) return;
+  [imageOrder[idx], imageOrder[newIdx]] = [imageOrder[newIdx], imageOrder[idx]];
+  renderImageQueue();
+}
+
+function removeImage(idx){
+  imageOrder.splice(idx,1);
+  renderImageQueue();
+  updateSlideshowEstimate();
+}
+
+function clearImages(){
+  imageOrder = [];
+  renderImageQueue();
+  updateSlideshowEstimate();
+}
+
+function updateSlideshowEstimate(){
+  const n     = imageOrder.length;
+  const dur   = parseFloat(document.getElementById('img-duration')?.value || 4);
+  const trans = parseFloat(document.getElementById('trans-duration')?.value || 0.8);
+  const el    = document.getElementById('slideshow-estimate');
+  if(!el) return;
+  if(n === 0){ el.innerHTML = 'Upload images to see estimated video duration.'; return; }
+  const totalSec = Math.max(0, n * dur - (n-1) * trans);
+  const m = Math.floor(totalSec / 60), s = Math.round(totalSec % 60);
+  el.innerHTML = `📊 <strong style="color:var(--cyan)">${n} image${n>1?'s':''}</strong> →
+    ~<strong style="color:var(--gold)">${m>0?m+'m ':''} ${s}s</strong> video
+    (${dur}s/image · ${trans}s transition)`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  VIDEO SELECTION + QUEUE TABLE
+// ═══════════════════════════════════════════════════════════
+function toggleVideoSelect(path, checked){
+  checked ? selectedVideos.add(path) : selectedVideos.delete(path);
+  updateProcessBtn();
+}
+function selectAllVideos(checked){
+  uploadedFiles.videos.forEach(f => checked ? selectedVideos.add(f.path) : selectedVideos.delete(f.path));
+  document.querySelectorAll('#video-list input[type=checkbox]').forEach(cb => cb.checked = checked);
+  renderQueue();
+  updateProcessBtn();
+}
+function updateProcessBtn(){
+  const btn = document.getElementById('process-btn');
+  if(!btn) return;
+  const n = selectedVideos.size;
+  btn.textContent = n > 0 ? `▶ Process ${n} Video${n>1?'s':''}` : '▶ Process Videos';
+  btn.disabled = (n === 0) || btn.dataset.running === 'true';
+}
+function renderQueue(){
+  const tbody = document.getElementById('queue-body');
+  if(uploadedFiles.videos.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--mute);padding:20px;font-size:.62rem">No videos uploaded yet</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = uploadedFiles.videos.map((f,i) => {
+    const dur  = f.duration_fmt || '—';
+    const res  = (f.width && f.height) ? `${f.width}×${f.height}` : '—';
+    const sz   = f.size_fmt || '—';
+    const cod  = f.codec || '—';
+    const sel  = selectedVideos.has(f.path);
+    return `<tr>
+      <td><input type="checkbox" ${sel?'checked':''} onchange="toggleVideoSelect('${escAttr(f.path)}',this.checked)" style="accent-color:var(--gold)"></td>
+      <td class="col-name" title="${escAttr(f.name)}">${escHtml(f.name)}</td>
+      <td class="col-meta">${dur}</td>
+      <td class="col-meta">${res}</td>
+      <td class="col-meta">${cod}</td>
+      <td class="col-size">${sz}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOGO CONTROLS
+// ═══════════════════════════════════════════════════════════
+function setPos(btn){
+  document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  logoPosition = btn.dataset.pos;
+  updateLogoPreview();
+}
+function updateLogoPreview(){
+  const enabled = document.getElementById('logo-enabled').checked;
+  const overlay = document.getElementById('preview-logo');
+  const img     = document.getElementById('preview-logo-img');
+  const opacity = document.getElementById('logo-opacity').value / 100;
+  const sizeRaw = parseInt(document.getElementById('logo-size').value);
+  if(!enabled || uploadedFiles.logo.length === 0){ overlay.style.display='none'; return; }
+  overlay.style.display = 'block';
+  img.style.opacity = opacity;
+  img.style.width   = Math.round(sizeRaw / 7) + 'px';
+  const m = 6;
+  overlay.style.top    = logoPosition.includes('top')    ? m+'px' : 'auto';
+  overlay.style.bottom = logoPosition.includes('bottom') ? m+'px' : 'auto';
+  overlay.style.left   = logoPosition.includes('left')   ? m+'px' : 'auto';
+  overlay.style.right  = logoPosition.includes('right')  ? m+'px' : 'auto';
+  img.src = 'data:image/svg+xml,' + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">
+      <circle cx="30" cy="30" r="28" stroke="#C9A84C" stroke-width="2" fill="rgba(10,22,40,0.8)"/>
+      <text x="30" y="35" text-anchor="middle" font-size="10" fill="#C9A84C" font-family="serif">LOGO</text>
+    </svg>`);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TRANSITION + ORIENTATION
+// ═══════════════════════════════════════════════════════════
+function setTransition(btn){
+  document.querySelectorAll('.trans-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedTrans = btn.dataset.trans;
+  document.getElementById('trans-selected-label').textContent = btn.textContent;
+}
+function setOrientation(btn){
+  document.querySelectorAll('.orient-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedOrient = btn.dataset.orient;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AUDIO UI
+// ═══════════════════════════════════════════════════════════
+function updateAudioUI(){
+  const mode = document.getElementById('audio-mode').value;
+  document.getElementById('audio-replace-section').style.display = mode==='replace' ? 'block':'none';
+  document.getElementById('audio-add-section').style.display     = mode==='add'     ? 'block':'none';
+}
+function updateSSAudioUI(){
+  const on = document.getElementById('ss-audio-enabled').checked;
+  document.getElementById('ss-audio-section').style.display = on ? 'block':'none';
+}
+function renderAudioSelects(){
+  const opts = uploadedFiles.audio.map(f => `<option value="${escAttr(f.path)}">${escHtml(f.name)}</option>`).join('');
+  document.getElementById('replace-audio-select').innerHTML = `<option value="">— Select audio —</option>${opts}`;
+  document.getElementById('add-audio-select').innerHTML     = `<option value="">— Select audio —</option>${opts}`;
+}
+function renderSSAudioSelect(){
+  const opts = uploadedFiles.audio.map(f => `<option value="${escAttr(f.path)}">${escHtml(f.name)}</option>`).join('');
+  const sel  = document.getElementById('ss-audio-select');
+  if(sel) sel.innerHTML = `<option value="">— Select audio —</option>${opts}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TRIM SEGMENTS
+// ═══════════════════════════════════════════════════════════
+function addTrimSegment(){
+  const container = document.getElementById('trim-segments-container');
+  const id = container.children.length;
+  const div = document.createElement('div');
+  div.className = 'trim-segment row2';
+  div.style.marginTop = '8px';
+  div.innerHTML = `
+    <div>
+      <span class="label">Section ${id+1}: Start</span>
+      <input type="text" class="trim-start" placeholder="00:00:00">
+    </div>
+    <div style="position:relative">
+      <span class="label">Section ${id+1}: End</span>
+      <input type="text" class="trim-end" placeholder="End">
+      <span class="file-del" onclick="this.parentElement.parentElement.remove()" style="position:absolute; right:-20px; top:28px">✕</span>
+    </div>`;
+  container.appendChild(div);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  BUILD SETTINGS
+// ═══════════════════════════════════════════════════════════
+function buildSettings(){
+  const segments = [];
+  document.querySelectorAll('.trim-segment').forEach(seg => {
+    const start = seg.querySelector('.trim-start').value.trim();
+    const end   = seg.querySelector('.trim-end').value.trim();
+    if(start || end) segments.push({start, end});
+  });
+
+  return {
+    logo_enabled:        document.getElementById('logo-enabled').checked,
+    logo_path:           uploadedFiles.logo[0]?.path || '',
+    logo_position:       logoPosition,
+    logo_size:           parseInt(document.getElementById('logo-size').value),
+    logo_opacity:        document.getElementById('logo-opacity').value / 100,
+    logo_margin:         parseInt(document.getElementById('logo-margin').value),
+    trim_segments:       segments,
+    intro_path:          (document.getElementById('add-intro').checked && uploadedFiles.intro[0]) ? uploadedFiles.intro[0].path : '',
+    outro_path:          (document.getElementById('add-outro').checked && uploadedFiles.outro[0]) ? uploadedFiles.outro[0].path : '',
+    mid_path:            (document.getElementById('add-mid').checked   && uploadedFiles.mid[0])   ? uploadedFiles.mid[0].path   : '',
+    mid_timestamp:       document.getElementById('mid-timestamp').value.trim(),
+    audio_mode:          document.getElementById('audio-mode').value,
+    replace_audio_path:  document.getElementById('replace-audio-select').value,
+    add_audio_path:      document.getElementById('add-audio-select').value,
+    audio_volume:        document.getElementById('audio-volume').value / 100,
+    bg_volume:           document.getElementById('bg-volume').value / 100,
+    quality:             document.getElementById('quality').value,
+    use_gpu:             document.getElementById('use-gpu').value === 'true',
+  };
+}
+function buildSlideshowSettings(){
+  const ssAudioEnabled = document.getElementById('ss-audio-enabled').checked;
+  return {
+    img_duration:        parseFloat(document.getElementById('img-duration').value),
+    transition_duration: parseFloat(document.getElementById('trans-duration').value),
+    transition:          selectedTrans,
+    transitions:         imageOrder.map(img => img.transition || ''),
+    fps:                 parseInt(document.getElementById('ss-fps').value),
+    orientation:         selectedOrient,
+    output_name:         document.getElementById('ss-output-name').value.trim() || 'slideshow',
+    audio_path:          ssAudioEnabled ? document.getElementById('ss-audio-select').value : '',
+    logo_enabled:        document.getElementById('ss-logo-enabled').checked,
+    logo_path:           uploadedFiles.logo[0]?.path || '',
+    logo_position:       logoPosition,
+    logo_size:           parseInt(document.getElementById('logo-size').value),
+    logo_opacity:        document.getElementById('logo-opacity').value / 100,
+    logo_margin:         parseInt(document.getElementById('logo-margin').value),
+    quality:             document.getElementById('quality').value,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  START JOBS
+// ═══════════════════════════════════════════════════════════
+async function startProcess(){
+  if(selectedVideos.size === 0){ showToast('Select at least one video first.'); return; }
+  const settings = buildSettings();
+  const files    = [...selectedVideos];
+  logMsg(`Starting video job: ${files.length} video(s)`, 'info');
+  try {
+    const resp = await fetch('/process', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({files, settings})});
+    const data = await resp.json();
+    if(data.error){ logMsg(`✗ ${data.error}`, 'error'); return; }
+    startPolling(data.job_id, `Processing ${files.length} video(s)…`);
+  } catch(e){ logMsg(`✗ Network error: ${e}`, 'error'); }
+}
+
+async function startSlideshow(){
+  if(imageOrder.length === 0){ showToast('Upload at least one image in the Images section (left sidebar).'); return; }
+  const settings = buildSlideshowSettings();
+  const files    = imageOrder.map(i => i.path);
+  logMsg(`Starting slideshow: ${files.length} image(s), transition=${selectedTrans}, ${selectedOrient}`, 'info');
+  try {
+    const resp = await fetch('/slideshow', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({files, settings})});
+    const data = await resp.json();
+    if(data.error){ logMsg(`✗ ${data.error}`, 'error'); return; }
+    startPolling(data.job_id, `Generating slideshow from ${files.length} image(s)…`);
+  } catch(e){ logMsg(`✗ Network error: ${e}`, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  POLLING + PROGRESS
+// ═══════════════════════════════════════════════════════════
+function startPolling(jobId, label){
+  currentJobId  = jobId;
+  lastLogCount  = 0;
+  jobStartTime  = Date.now();
+  logMsg(`Job started: ${jobId}`, 'success');
+
+  // Show progress section
+  const ps = document.getElementById('progress-section');
+  ps.classList.add('active');
+  document.getElementById('outputs-section').style.display = 'none';
+  document.getElementById('progress-fill').style.width    = '0%';
+  document.getElementById('item-progress-fill').style.width = '0%';
+  document.getElementById('progress-pct').textContent     = '0%';
+  document.getElementById('progress-label').textContent   = label;
+  document.getElementById('progress-count').textContent   = '';
+  document.getElementById('eta-badge').textContent        = '⏱ ETA: --:--';
+
+  // Disable buttons
+  setButtonsRunning(true);
+  addJobHistory(jobId);
+
+  // Clear old intervals
+  if(pollInterval)    clearInterval(pollInterval);
+  if(elapsedInterval) clearInterval(elapsedInterval);
+
+  // Elapsed timer (client-side, updates every second)
+  elapsedInterval = setInterval(() => {
+    const sec = Math.floor((Date.now() - jobStartTime) / 1000);
+    const m = Math.floor(sec/60), s = sec%60;
+    document.getElementById('progress-elapsed').textContent =
+      `Elapsed: ${m>0?m+'m ':''} ${s}s`;
+  }, 1000);
+
+  pollInterval = setInterval(() => pollJob(jobId), 1200);
+}
+
+function setButtonsRunning(on){
+  const ids = ['process-btn', 'slideshow-btn', 'process-slideshow-btn'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.disabled = on; el.dataset.running = on ? 'true' : 'false'; }
+  });
+  if(!on) updateProcessBtn(); // restore video count label
+}
+
+async function pollJob(jid){
+  try {
+    const resp = await fetch(`/job/${jid}`);
+    const data = await resp.json();
+    const pct  = data.progress || 0;
+
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-pct').textContent  = pct + '%';
+
+    if(data.item_pct !== undefined){
+      document.getElementById('item-progress-fill').style.width = data.item_pct + '%';
+    }
+    if(data.current_item !== undefined && data.total_items !== undefined){
+      document.getElementById('progress-count').textContent =
+        `Files: ${data.current_item} / ${data.total_items}`;
+    }
+
+    // ETA display
+    if(data.eta !== null && data.eta !== undefined){
+      const h = Math.floor(data.eta / 3600);
+      const m = Math.floor((data.eta % 3600) / 60);
+      const s = data.eta % 60;
+      const etaStr = h > 0
+        ? `${h}:${pad(m)}:${pad(s)}`
+        : `${m}:${pad(s)}`;
+      document.getElementById('eta-badge').textContent = `⏱ ETA: ${etaStr}`;
+    } else {
+      document.getElementById('eta-badge').textContent = '⏱ ETA: Calculating…';
+    }
+
+    const statusMap = {done:'✓ Complete!', error:'✗ Error occurred', cancelled:'— Cancelled'};
+    document.getElementById('progress-label').textContent =
+      statusMap[data.status] || label_from_status(data.status);
+
+    renderLogs(data.logs);
+
+    if(['done','error','cancelled'].includes(data.status)){
+      clearInterval(pollInterval);
+      clearInterval(elapsedInterval);
+      setButtonsRunning(false);
+      if(data.status === 'done' && data.outputs?.length > 0) renderOutputs(data.outputs);
+      updateJobHistory(jid, data.status);
+      if(data.status === 'done') logMsg(`✓ Job complete: ${data.outputs?.length || 0} output(s)`, 'success');
+    }
+  } catch(e){ console.error('Poll error:', e); }
+}
+
+function label_from_status(s){
+  const m = {queued:'Queued…', running:'Processing…', processing:'Processing…'};
+  return m[s] || 'Processing…';
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER LOGS + OUTPUTS
+// ═══════════════════════════════════════════════════════════
+function renderLogs(logs){
+  if(!logs || logs.length === lastLogCount) return;
+  const panel   = document.getElementById('log-panel');
+  const newLogs = logs.slice(lastLogCount);
+  newLogs.forEach(l => {
+    const div = document.createElement('div');
+    div.className = `log-${l.level || 'info'}`;
+    div.innerHTML = `<span class="log-ts">${escHtml(l.ts)}</span>${escHtml(l.msg)}`;
+    panel.appendChild(div);
+  });
+  panel.scrollTop = panel.scrollHeight;
+  lastLogCount = logs.length;
+}
+
+function renderOutputs(outputs){
+  const section = document.getElementById('outputs-section');
+  const list    = document.getElementById('output-list');
+  section.style.display = 'block';
+  list.innerHTML = outputs.map(p => {
+    const name = p.split(/[\\/]/).pop();
+    return `<div class="output-item">
+      <span class="output-icon">🎬</span>
+      <span class="output-name" title="${escAttr(p)}">${escHtml(name)}</span>
+      <a class="output-dl" href="/download?path=${encodeURIComponent(p)}" download="${escAttr(name)}">⬇ Download</a>
+    </div>`;
+  }).join('');
+  // Scroll center panel to outputs
+  setTimeout(() => {
+    section.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }, 300);
+}
+
+async function cancelJob(){
+  if(!currentJobId) return;
+  try {
+    await fetch(`/job/${currentJobId}/cancel`, {method:'POST'});
+    clearInterval(pollInterval);
+    clearInterval(elapsedInterval);
+    logMsg('Job cancelled by user.', 'warn');
+    setButtonsRunning(false);
+  } catch(e){ logMsg(`✗ Cancel failed: ${e}`, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  JOB HISTORY
+// ═══════════════════════════════════════════════════════════
+function addJobHistory(jobId){
+  const container = document.getElementById('job-history');
+  if(container.querySelector('[data-no-jobs]')) container.innerHTML = '';
+  const el = document.createElement('div');
+  el.id = `history-${jobId}`;
+  el.className = 'job-hist-item';
+  el.innerHTML = `
+    <span style="color:var(--cyan);flex-shrink:0">⟳</span>
+    <div class="job-hist-id">Job ${jobId.slice(0,10)}…</div>
+    <span id="history-status-${jobId}" class="job-hist-stat" style="color:var(--warn)">Running</span>`;
+  container.insertBefore(el, container.firstChild);
+}
+function updateJobHistory(jobId, status){
+  const el = document.getElementById(`history-status-${jobId}`);
+  if(!el) return;
+  const map = {done:'✓ Done', error:'✗ Error', cancelled:'— Cancelled'};
+  const col = {done:'var(--green)', error:'var(--red)', cancelled:'var(--mute)'};
+  el.textContent = map[status] || status;
+  el.style.color = col[status] || 'var(--mute)';
+  const icon = el.parentElement?.querySelector('span:first-child');
+  if(icon) icon.textContent = status === 'done' ? '✓' : status === 'error' ? '✗' : '—';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOG PANEL
+// ═══════════════════════════════════════════════════════════
+function logMsg(msg, level='info'){
+  const panel = document.getElementById('log-panel');
+  const ts    = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const div   = document.createElement('div');
+  div.className = `log-${level}`;
+  div.innerHTML = `<span class="log-ts">${ts}</span>${escHtml(String(msg))}`;
+  panel.appendChild(div);
+  panel.scrollTop = panel.scrollHeight;
+}
+function clearLog(){
+  document.getElementById('log-panel').innerHTML = '';
+  lastLogCount = 0;
+  logMsg('Log cleared.', 'info');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TOAST (replaces alert)
+// ═══════════════════════════════════════════════════════════
+function showToast(msg){
+  const t = document.createElement('div');
+  t.style.cssText = `
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:rgba(224,160,64,.95);color:#030810;padding:10px 22px;
+    border-radius:20px;font-size:.75rem;letter-spacing:.12em;
+    z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.5);
+    animation:fadeUp .25s ease;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DRAG & DROP on dropzones
+// ═══════════════════════════════════════════════════════════
+document.querySelectorAll('.dropzone').forEach(dz => {
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    if(!e.dataTransfer.files.length) return;
+    const input = dz.querySelector('input[type=file]');
+    if(!input) return;
+    const handler = input.getAttribute('onchange') || '';
+    if(handler.includes('uploadImages'))  uploadImages(e.dataTransfer.files);
+    else if(handler.includes('uploadFiles')){
+      const m = handler.match(/uploadFiles\('(\w+)'/);
+      if(m) uploadFiles(m[1], e.dataTransfer.files);
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════
+function escHtml(s){
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s){ return String(s)
+    .replace(/\\/g,'\\\\') // escape backslashes
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;'); }
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  logMsg(
+    'App initialized. FFmpeg: {{ "OK — ready to process" if ffmpeg_ok else "NOT FOUND — install FFmpeg and add to PATH" }}',
+    '{{ "success" if ffmpeg_ok else "error" }}'
+  );
+  updateAudioUI();
+  renderImageQueue();
+  updateSlideshowEstimate();
+  updateProcessBtn();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+name: Feature Request
+description: Suggest an enhancement or new capability for Video Editor
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Use Case
+      description: What problem would this feature address?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe how you would like this feature to behave
+    validations:
+      required: true
